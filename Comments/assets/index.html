@@ -1,0 +1,663 @@
+﻿
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="Blaize Stewart">
+    <meta name="generator" content="Hugo 0.88.1">
+    <title>Jekyll Manager</title>
+
+
+
+
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/api/static?file=headers.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+
+    <style>
+        .bd-placeholder-img {
+            font-size: 1.125rem;
+            text-anchor: middle;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+
+        @media (min-width: 768px) {
+            .bd-placeholder-img-lg {
+                font-size: 3.5rem;
+            }
+        }
+    </style>
+
+
+    <!-- Custom styles for this template -->
+
+</head>
+
+<script>
+
+    var easyMDE;
+    var activeDraft;
+    var activeFolder = "";
+    var code;
+
+    function login() {
+        document.getElementById("code-box").style.display = "none";
+        if (document.getElementById("remembercode").checked) {
+            localStorage.setItem("facode", document.getElementById("code").value);
+        } else {
+            localStorage.setItem("facode", "");
+        }
+        code = document.getElementById("code").value;
+        easyMDE = new EasyMDE({ element: document.getElementById('editmarkdown') });
+        GetDrafts();
+    }
+
+
+    function init() {
+        code = localStorage.getItem("facode");
+        if (code && code != "") {
+            document.getElementById("code").value = code;
+            document.getElementById("remembercode").checked = true;
+        }        
+    }
+
+    function ChangeFolder(folder) {
+        activeFolder = decodeURIComponent(folder);
+        GetEverything();
+    }
+
+    function GetEverything() {
+
+        ToggleTab("everything-tab");
+        TogglePanels(["everything","everything-act"]);
+
+
+
+        var listOptions = {
+            recurse: false,
+            folder: activeFolder,
+            includeFolders: true,
+            excludedFolders: [".github", ".git", "_site", ".jekyll-cache"]
+        }
+
+        var url = "/api/ListFiles?code=" + code;
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(listOptions)
+        })
+            .then(response => {
+                console.log(response);
+                return response.json();
+            })
+            .then(data => {
+                let files = data;
+
+                var htmlStr = "";
+                folderStr = ""
+
+                activeFolder = files.folder;
+
+                var activeFolderHtml = ""
+
+                if (activeFolder != "") {
+                    var folderParts;
+                    var sep = "\\";
+                    if (activeFolder.includes("\\")) {
+                        folderParts = activeFolder.split("\\");
+                    } else {
+                        sep = "/";
+                        folderParts = activeFolder.split("/");
+                    }
+                    activeFolderHtml += `<a href="#" onclick="ChangeFolder('')">[Root]</a>` + sep;
+                    var folderStr = sep;
+                    for (var i = 0; i < folderParts.length; i++) {
+                        if (folderParts[i] != "") {
+                            folderStr += folderParts[i] + sep;
+                            activeFolderHtml += `<a href="#" onclick="ChangeFolder('${encodeURIComponent(folderStr)}')">${folderParts[i]}</a>${sep}`
+                        }
+                        
+
+                    }
+                }
+
+                document.getElementById("currentFolder").innerHTML = activeFolderHtml;
+
+                var extensions = ["md", "html", "htm", "js", "css", "txt","yaml","yml"];
+
+
+                for (var i = 0; i < files.files.length; i++) {
+
+                    var file = files.files[i];
+
+                    var nameHtml = file.name;
+                    var btnHtml = "";
+
+                    
+                    if (file.isFolder) {
+                        nameHtml = `<a href="#" onclick="ChangeFolder('${encodeURIComponent(file.name)}')" >${file.name}</a>`
+                    } else {
+                        var fileParts = file.name.split(".");
+                        var editBtn = "";
+                        if (extensions.includes(fileParts[fileParts.length - 1])) {
+                            btnHtml += `<a alt="Edit"  onclick="Edit('${encodeURIComponent(file.name)}','everything-btn')" role="button">[📝]</a>`
+                        }
+                        btnHtml += `
+<a alt="Delete"  onclick="Delete('${encodeURIComponent(file.name)}',GetEverything)" role="button">[🗑️]</a>
+<a alt="Download" onclick="Download('${encodeURIComponent(file.name)}',GetEverything)" role="button">[⬇️]</a>`
+                    }
+
+                    htmlStr += `
+<div class="row">
+<div class="col-9">${nameHtml}</div>
+<div class="col-3" style="text-align:right">
+${btnHtml}
+</div>
+</div>`
+                }
+
+                document.getElementById("everything").innerHTML = htmlStr;
+
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function GetPosts() {
+
+        ToggleTab("posts-tab");
+        TogglePanels(["post"]);
+
+
+        var listOptions = {
+            folder: "_posts",
+            recurse: false,
+            extension: "md",
+            includeFolders: false,
+            includeMetadata: true
+        }
+
+        var url = "/api/ListFiles?code=" + code;
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(listOptions)
+        })
+            .then(response => {
+                console.log(response);
+                return response.json();
+            })
+            .then(data => {
+                let posts = data;
+
+                var htmlStr = "";
+
+                if (posts.files.length == 0) {
+                    alert("No Files Found. Try 'Pull or Clone' to get the repo")
+                    return;
+                }
+
+                for (var i = 0; i < posts.files.length; i++) {
+
+                    var post = posts.files[i];
+
+                    htmlStr += `
+<div class="row">
+<div class="col-3">${post.name}</div>
+<div class="col-6">${post.metadata.title}</div>
+<div class="col-3" style="text-align:right">
+<a alt="Edit" onclick="Edit('${encodeURIComponent(post.name)}','post-btn')" role="button">[📝]</a>
+<a alt="Unpublish" onclick="UnpublishPost('${encodeURIComponent(post.name)}')" role="button">[📥]</a>
+<a alt="Delete" onclick="Delete('${encodeURIComponent(post.name)}',GetPosts)" role="button">[🗑️]</a>
+</div>
+</div>
+`
+                }
+
+                document.getElementById("post").innerHTML = htmlStr;
+
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function GetDrafts() {
+
+        ToggleTab("drafts-tab");
+        TogglePanels(["draft"]);
+
+
+        var listOptions = {
+            folder : "_drafts",
+            recurse : false,
+            extension: "md",
+            includeFolders: false,
+            includeMetadata: true
+        }
+
+        var url = "/api/ListFiles?code=" + code
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(listOptions)
+        })
+            .then(response => {
+                console.log(response);
+                return response.json();
+            })
+            .then(data => {
+                let drafts = data;
+
+                var htmlStr = `<a class="btn btn-primary btn-sm" href="#" onclick="CreateNew('draft-btn')">New Draft</a>`;
+
+                if (drafts.files.length == 0) {
+                    alert("No Files Found. Try 'Pull or Clone' to get the repo")
+                    return;
+                }
+
+                for (var i = 0; i < drafts.files.length; i++) {
+
+                    var draft = drafts.files[i];
+
+                    htmlStr += `
+<div class="row">
+<div class="col-3">${draft.name}</div>
+<div class="col-6">${draft.metadata.title}</div>
+<div class="col-3" style="text-align:right">
+<a alt="Edit"  onclick="Edit('${encodeURIComponent(draft.name)}','draft-btn')" role="button">[📝]</a>
+<a alt="Pulbish" onclick="PublishDraft('${encodeURIComponent(draft.name)}')" role="button">[📤]</a>
+<a alt="Delete" onclick="Delete('${encodeURIComponent(draft.name)}',GetDrafts)" role="button">[🗑️]</a>
+</div>
+</div>
+`
+                }
+
+                document.getElementById("draft").innerHTML = htmlStr;
+
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function Download(filepath) {
+
+        fn = decodeURI(filepath);
+        var url = "/api/GetFile?filepath=" + fn + "&code=" + code;
+
+        var fileParts;
+
+        if (fn.includes("\\")) {
+            fileParts = fn.split("\\");
+        } else {
+            fileParts = fn.split("/");
+        }
+
+        var fileName = fileParts[fileParts.length - 1];
+
+
+        fetch(url, {
+            method: "GET",
+        })
+            .then(response => {
+                console.log(response);
+                return response.blob();
+            })
+            .then(blob => {
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function CreateNew(buttonpanel) {
+        var markdown = `---
+layout: post
+title:  "Replace with your title"
+date:   ${new Date().toISOString()}
+categories: category1 category1
+author: Your Name
+description: A short blurb about your article.
+---
+
+Your Markdown Content Goes Here.
+`;
+        TogglePanels(["mdeditor", buttonpanel]);
+        activeDraft = "";
+        easyMDE.value(markdown);
+    }
+
+    function Edit(filepath, buttonpanel)
+    {
+
+        var url = "/api/GetFile?filepath=" + decodeURI(filepath) + "&code=" + code;
+
+        fetch(url, {
+            method: "GET",
+        })
+            .then(response => {
+                console.log(response);
+                return response.text();
+            })
+            .then(text => {
+                var markdown = text;
+                TogglePanels(["mdeditor", buttonpanel]);
+                //ToggleButtons(buttonpanel);
+                activeDraft = decodeURI(filepath);
+                easyMDE.value(markdown);
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function Delete(filePath,callback) {
+
+        var url = "/api/DeleteFile?filepath=" + decodeURIComponent(filePath) + "&code=" + code;
+
+        fetch(url, {
+            method: "GET",
+        })
+            .then(response => {
+                console.log(response);
+                return response.text();
+            })
+            .then(text => {
+                alert(decodeURIComponent(filePath) + " Deleted.")
+                callback();
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function Save(callback) {
+
+        var fd = new FormData();
+
+        var file = new Blob([easyMDE.value()]);        
+
+        var isNew = false;
+
+        if (activeDraft == "") {
+            isNew = true;
+            var d = new Date();
+            var dateName = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDay() + "-your-title.md";
+            var fname = "";
+
+            fname = prompt("Enter a Filename.", dateName);
+            if (!fname || fname == "") {
+                alert("Save Canceled.")
+                return; 
+            } 
+            activeDraft = "/_drafts/" + fname;
+
+        }
+
+
+        fd.append("filepath", activeDraft);
+        fd.append("file1", file, activeDraft);
+
+        var url = "/api/UploadFile?filepath=" + encodeURIComponent(activeDraft) + "&code=" + code;
+
+        fetch(url, {
+            method: "POST",
+            body: fd
+        })
+            .then(response => {
+                console.log(response);
+                return response.text();
+            })
+            .then(text => {
+                alert(activeDraft + " Saved.")
+                callback();
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function Upload() {
+
+        var fd = new FormData();
+
+        var file = document.getElementById("fileUpload").files[0];
+
+        fd.append("filepath", activeFolder);
+        fd.append("file1", file, file.name);
+
+
+        var url = "/api/UploadFile?code=" + code;
+
+        fetch(url, {
+            method: "POST",
+            body: fd
+        })
+            .then(response => {
+                console.log(response);
+                return response.text();
+            })
+            .then(text => {
+                alert(file.name + " uploaded.");
+                GetEverything();
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function TogglePanels(active) {
+        var displayIds = ["draft", "mdeditor", "post", "everything", "draft-btn", "post-btn", "everything-btn", "everything-act"];
+        for (var i = 0; i < displayIds.length; i++) {
+            var display = "none";
+            if (active.includes(displayIds[i])) display = "block";
+            if (document.getElementById(displayIds[i])) {
+                document.getElementById(displayIds[i]).style.display = display;
+            }
+        }
+    }
+
+    function UnpublishPost(filepath) {
+        var source = decodeURIComponent(filepath);
+        var dest = source.replace("_posts", "_drafts")
+        var url = `/api/MoveFile?filepath=${encodeURIComponent(source)}&destinationpath=${encodeURIComponent(dest)}`;
+        url += "&code=" + code
+        fetch(url, {
+            method: "GET",
+        })
+            .then(response => {
+                console.log(response);
+                return response.text();
+            })
+            .then(text => {
+                alert(source + " unpublished to drafts.")
+                GetPosts();
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function PublishDraft(filepath) {
+        var source = decodeURIComponent(filepath);
+        var dest = source.replace("_drafts", "_posts")
+        var url = `/api/MoveFile?filepath=${encodeURIComponent(source)}&destinationpath=${encodeURIComponent(dest)}`;
+        url += "&code=" + code
+        fetch(url, {
+            method: "GET",
+        })
+            .then(response => {
+                console.log(response);
+                return response.text();
+            })
+            .then(text => {
+                alert(source + " published to posts.")
+                GetDrafts();
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function ToggleTab(active) {
+        var tabIds = ["drafts-tab", "posts-tab", "everything-tab"];
+        for (var i = 0; i < tabIds.length; i++) {
+            if (document.getElementById(tabIds[i])) {
+                if (tabIds[i] == active)
+                    document.getElementById(tabIds[i]).classList.add("active");
+                else
+                    document.getElementById(tabIds[i]).classList.remove("active");
+            }
+        }    
+    }
+
+    function PullOrClone() {
+        var url = "/api/PullOrClone?code=" + code;
+
+        fetch(url, {
+            method: "GET",
+        })
+            .then(response => {
+                console.log(response);
+                return response.text();
+            })
+            .then(text => {
+                GetDrafts();
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+    function Push() {
+        var url = "/api/Push?code=" + code;
+
+        fetch(url, {
+            method: "GET",
+        })
+            .then(response => {
+                console.log(response);
+                return response.text();
+            })
+            .then(text => {
+                alert("Changes Pushed!");
+            })
+            .catch(error => {
+                alert(error);
+            });
+    }
+
+</script>
+
+
+<body onload="init()">
+    <main>
+
+        <div class="container">
+            <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
+                <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
+                    <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap" /></svg>
+                    <span class="fs-4">Jekyll Manager</span>
+                </a>
+
+                <ul class="nav nav-pills">
+                    <li class="nav-item"><a id="drafts-tab" onclick="GetDrafts()" href="#" class="nav-link active" aria-current="page">Drafts</a></li>
+                    <li class="nav-item"><a id="posts-tab" onclick="GetPosts()" href="#" class="nav-link">Posts</a></li>
+                    <li class="nav-item"><a id="everything-tab" onclick="GetEverything()" href="#" class="nav-link">Everything</a></li>
+                    <li class="nav-item"><a href="#" onclick="PullOrClone()" class="nav-link">Pull or Clone</a></li>
+                    <li class="nav-item"><a href="#" onclick="Push()" class="nav-link">Push Changes</a></li>
+                </ul>
+            </header>
+        </div>
+
+        <div class="b-example-divider"></div>
+
+
+        <div class="container" id="draft">
+
+        </div>
+
+        <div class="container" id="post">
+
+        </div>
+
+
+
+
+        <div class="container" id="everything-act" style="display:none">
+            <div class="row">
+                <div id="currentFolder" class="col-6">
+
+                </div>
+                <div class="col-6">
+                    <div><input type="file" id="fileUpload" /><a class="btn btn-primary btn-sm" onclick="Upload('everything')" role="button">Upload</a></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container" id="everything">
+
+        </div>
+
+
+
+        <div class="container" style="display:none" id="draft-btn">
+            <div>
+                <a class="btn btn-primary btn-sm" onclick="Save(GetDrafts)" role="button">Save</a>
+                <a class="btn btn-primary btn-sm" onclick="TogglePanels(['draft'])" role="button">Cancel</a>
+            </div>
+        </div>
+        <div class="container" style="display:none" id="post-btn">
+            <div>
+                <a class="btn btn-primary btn-sm" onclick="Save(GetDrafts)" role="button">Save</a>
+                <a class="btn btn-primary btn-sm" onclick="TogglePanels(['post'])" role="button">Cancel</a>
+            </div>
+        </div>
+        <div class="container" style="display:none" id="everything-btn">
+            <div>
+                <a class="btn btn-primary btn-sm" onclick="Save(GetEverything)" role="button">Save</a>
+                <a class="btn btn-primary btn-sm" onclick="TogglePanels(['everything','everything-act'])" role="button">Cancel</a>
+            </div>
+        </div>
+        <div id="mdeditor" class="container" style="display:none"><textarea id="editmarkdown"></textarea></div>
+
+        <div class="container" id="code-box" style="text-align:center">
+            <div>Function App Code: <input type="text" value="" id="code" /><a class="btn btn-primary btn-sm" onclick="login()" role="button">Login</a></div>
+            <div><input type="checkbox" id="remembercode" /> Remember Code</div>
+        </div>
+
+
+    </main>
+
+
+
+
+</body>
+
