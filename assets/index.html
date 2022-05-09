@@ -409,7 +409,7 @@ Your Markdown Content Goes Here.
         if (activeDraft == "") {
             isNew = true;
             var d = new Date();
-            var dateName = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDay() + "-your-title.md";
+            var dateName = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate() + "-your-title.md";
             var fname = "";
 
             fname = prompt("Enter a Filename.", dateName);
