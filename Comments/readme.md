@@ -1,6 +1,4 @@
-﻿#Lightweight Manager for Jekyll v0.1
-
-
+﻿# Lightweight Manager for Jekyll v0.1
 
 This project grew out of a desire to create a lightweight manager for Jekyll-based blogs. The idea was simple: use an Azure Function App to manage the Git repo that contains the site. The app makes a local copy of the repo relative to the function app, then allows a user to use a WYSIWYG editor for modifying drafts and posts in Jekyll. It also has a lightweight file manager to upload and download content to the repository, such as static assets. Changes are made locally relative to the editor and then pushed to the repo when the edits are finished.
 
