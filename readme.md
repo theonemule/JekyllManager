@@ -1,5 +1,7 @@
 ﻿# Lightweight Manager for Jekyll v0.1
 
+![Screen Shot](screenshot.png)
+
 This project grew out of a desire to create a lightweight manager for Jekyll-based blogs. The idea was simple: use an Azure Function App to manage the Git repo that contains the site. The app makes a local copy of the repo relative to the function app, then allows a user to use a WYSIWYG editor for modifying drafts and posts in Jekyll. It also has a lightweight file manager to upload and download content to the repository, such as static assets. Changes are made locally relative to the editor and then pushed to the repo when the edits are finished.
 
 To deploy, download the repository and deploy it to an Azure Function using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/functionapp/deployment?view=azure-cli-latest), [PowerShell](https://docs.microsoft.com/en-us/azure/azure-functions/create-first-function-cli-powershell?tabs=azure-cli%2Cbrowser), the [Function Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Cwindows%2Ccsharp%2Cportal%2Cbash#publish), [VS Code](https://www.serverlessnotes.com/docs/deploy-azure-functions-with-visual-code), or [Visual Studio](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-vs?tabs=in-process). Alternatively, fork this repo and deploy it to an Azure Function using a [GitHub Action](https://docs.microsoft.com/en-us/azure/azure-functions/functions-how-to-github-actions?tabs=dotnet).
